@@ -1,0 +1,88 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: serverless-app
+Transform:
+- AWS::Serverless-2016-10-31
+Resources:
+  UuidLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: uuid-layer
+      Description: A layer for the uuid package
+      ContentUri: ..\..\layers\uuid
+      CompatibleRuntimes:
+      - nodejs16.x
+      - nodejs18.x
+  getUsersFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/get-users.getUsersHandler
+      Runtime: nodejs16.x
+      Layers:
+      - Ref: UuidLayer
+      Architectures:
+      - x86_64
+      MemorySize: 128
+      Timeout: 100
+      Description: A simple example includes a HTTP get method to get all items from
+        a DynamoDB table.
+      Policies:
+      - DynamoDBCrudPolicy:
+          TableName:
+            Ref: SampleTable
+      Environment:
+        Variables:
+          SAMPLE_TABLE:
+            Ref: SampleTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /
+            Method: GET
+      CodeUri: getUsersFunction
+    Metadata:
+      SamResourceId: getUsersFunction
+  registerUserFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/register-user.registerUserHandler
+      Runtime: nodejs16.x
+      Layers:
+      - Ref: UuidLayer
+      Architectures:
+      - x86_64
+      MemorySize: 128
+      Timeout: 100
+      Description: A simple example includes a HTTP post method to add one item to
+        a DynamoDB table.
+      Policies:
+      - DynamoDBCrudPolicy:
+          TableName:
+            Ref: SampleTable
+      Environment:
+        Variables:
+          SAMPLE_TABLE:
+            Ref: SampleTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /
+            Method: POST
+      CodeUri: registerUserFunction
+    Metadata:
+      SamResourceId: registerUserFunction
+  SampleTable:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      PrimaryKey:
+        Name: id
+        Type: String
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
+Outputs:
+  WebEndpoint:
+    Description: API Gateway endpoint URL for Prod stage
+    Value:
+      Fn::Sub: https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/
